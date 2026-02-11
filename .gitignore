@@ -51,6 +51,7 @@ Thumbs.db
 *.gexf
 
 # But track the summary results
+!experiments
 !experiments/**/*.json
 !experiments/**/*.csv
 !experiments/**/summary.md
