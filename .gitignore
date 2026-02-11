@@ -1,0 +1,56 @@
+# === Data & Heavy Files ===
+# We ignore the entire data folder except for the sample file
+data/*
+!data/reports_sample.tsv
+
+# Ignore the symlink to heavy images (the folder name we discussed)
+data/images/
+data_source/
+
+# Ignore all large graph outputs and CSV dumps
+*.gexf
+*.html
+experiments/**/outputs/
+*.csv
+
+# === Security & API Keys ===
+# Never track your Groq or Gemini keys
+.env
+.flaskenv
+config/secrets.json
+api_keys.txt
+
+# === Python Environment & System ===
+# Ignore the virtual environment you'll build on the HPC
+medical_env/
+venv/
+env/
+bin/
+lib/
+share/
+
+# Python cache files
+**/__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# === HPC & OS Specific ===
+# Slurm/HPC logs (to keep your repo clean of job noise)
+*.log
+slurm-*.out
+*.err
+
+# macOS/Windows system files
+.DS_Store
+Thumbs.db
+
+
+# ====================================
+# Ignore the big graph files
+*.gexf
+
+# But track the summary results
+!experiments/**/*.json
+!experiments/**/*.csv
+!experiments/**/summary.md
