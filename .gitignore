@@ -1,7 +1,7 @@
 # === Data & Heavy Files ===
 # We ignore the entire data folder except for the sample file
 data/*
-!data/reports_sample.tsv
+!data/impressions_20250611.tsv
 
 # Ignore the symlink to heavy images (the folder name we discussed)
 data/images/
