@@ -182,7 +182,7 @@ import time
 
 # --- MIGRATED SETUP ---
 # The new SDK uses a Client object instead of genai.configure()
-client = genai.Client(api_key="AIzaSyAM84bqxaWA58zygghqrzO0FAHz00x5fzw")
+client = genai.Client(api_key)
 
 # Load ScispaCy with Entity Linker for Grounding
 nlp = spacy.load("en_core_sci_sm")
@@ -274,7 +274,7 @@ import json
 import time
 
 # --- INITIALIZATION ---
-client = genai.Client(api_key="AIzaSyCP7Xe0-bQ9Fg9-wcpfpDqdCv6fL6UIm5s")
+client = genai.Client(api_key)
 
 # Load ScispaCy for local normalization and linking
 nlp = spacy.load("en_core_sci_sm")
