@@ -8,10 +8,10 @@ data/images/
 data_source/
 
 # Ignore all large graph outputs and CSV dumps
-*.gexf
-*.html
-experiments/**/outputs/
-*.csv
+# *.gexf
+# *.html
+# experiments/**/outputs/
+# *.csv
 
 # === Security & API Keys ===
 # Never track your Groq or Gemini keys
