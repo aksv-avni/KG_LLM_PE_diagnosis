@@ -9,6 +9,9 @@ Original file is located at
 
 !pip install networkx pyvis
 
+
+# ================================================= RANDOM GRAPH FOR TESTING VISUALIZATION =================================================
+
 """Random small graph"""       
 
 import networkx as nx
@@ -80,6 +83,9 @@ if __name__ == "__main__":
     pe_kg = create_pe_knowledge_graph()
     visualize_graph(pe_kg)
     print("Graph constructed. Open 'pe_diagnosis_kg.html' to view.")
+
+
+
 
 # Update fundamental build tools
 !pip install -U pip setuptools wheel
@@ -167,7 +173,12 @@ def visualize_kg(nx_graph, output_file="pe_pilot_graph.html"):
 # Usage
 visualize_kg(kg_pilot)
 
-"""# KG from sample data - (scispacy)"""
+# ================================================ LLM-BASED KG ON SAMPLE IMPRESSIONS =====================================================================
+# ================================================ USING GROQ, Llama 3.3 70B, and ScispaCy FOR ENTITY MAPPING TO UMLS ================================================
+
+
+
+"""# KG from sample data - (scispacy) """
 
 import pandas as pd
 from google import genai
@@ -180,87 +191,7 @@ import networkx as nx
 import json
 import time
 
-# --- MIGRATED SETUP ---
-# The new SDK uses a Client object instead of genai.configure()
-client = genai.Client(api_key)
 
-# Load ScispaCy with Entity Linker for Grounding
-nlp = spacy.load("en_core_sci_sm")
-nlp.add_pipe("abbreviation_detector")
-nlp.add_pipe("scispacy_linker", config={"resolve_abbreviations": True, "linker_name": "umls"})
-linker = nlp.get_pipe("scispacy_linker")
-
-def get_grounded_entity(text):
-    """Standardize string to UMLS CUI."""
-    doc = nlp(text)
-    if doc.ents and doc.ents[0]._.kb_ents:
-        cui = doc.ents[0]._.kb_ents[0][0]
-        return cui, linker.kb.cui_to_entity[cui].canonical_name
-    return "Unknown", text
-
-def run_migrated_pilot(file_path, limit=20):
-    df = pd.read_csv(file_path, sep='\t').head(limit)
-    G = nx.MultiDiGraph()
-
-    # Define System Instructions as a variable (New SDK Preference)
-    sys_instruct = (
-        "Extract clinical triplets for a PE diagnosis KG. "
-        "Nodes: Anatomy, Pathology, Assertion. Relations: located_in, manifested_as, associated_with."
-    )
-
-    for _, row in df.iterrows():
-        try:
-            print(f"Processing {row['impression_id']}...")
-
-            # MIGRATED CALL: Use client.models.generate_content
-            response = client.models.generate_content(
-                model="gemini-2.0-flash", # Updated to latest stable version
-                contents=row['impressions'],
-                config=types.GenerateContentConfig(
-                    system_instruction=sys_instruct,
-                    response_mime_type="application/json",
-                    # You can also use a Pydantic model here for even stricter typing
-                    response_schema={
-                        "type": "OBJECT",
-                        "properties": {
-                            "triplets": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "subject": {"type": "STRING"},
-                                        "predicate": {"type": "STRING"},
-                                        "object": {"type": "STRING"}
-                                    }
-                                }
-                            }
-                        }
-                    }
-                )
-            )
-
-            # The response is now a pydantic-like object; access text directly
-            data = json.loads(response.text)
-
-            for tri in data.get('triplets', []):
-                subj_cui, subj_name = get_grounded_entity(tri['subject'])
-                obj_cui, obj_name = get_grounded_entity(tri['object'])
-
-                G.add_edge(
-                    subj_name, obj_name,
-                    relation=tri['predicate'],
-                    cui_pair=(subj_cui, obj_cui)
-                )
-
-            time.sleep(4) # Rate limit safety for free tier
-
-        except Exception as e:
-            print(f"Error: {e}")
-
-    return G
-
-# --- EXECUTION ---
-kg_pilot = run_migrated_pilot('impressions_20250611.tsv', limit=20)
 
 import pandas as pd
 from google import genai
@@ -272,101 +203,6 @@ from scispacy.linking import EntityLinker
 import networkx as nx
 import json
 import time
-
-# --- INITIALIZATION ---
-client = genai.Client(api_key)
-
-# Load ScispaCy for local normalization and linking
-nlp = spacy.load("en_core_sci_sm")
-nlp.add_pipe("abbreviation_detector")
-nlp.add_pipe("scispacy_linker", config={"resolve_abbreviations": True, "linker_name": "umls"})
-linker = nlp.get_pipe("scispacy_linker")
-
-def get_grounded_node(text):
-    """Link text to UMLS CUI to merge synonymous nodes."""
-    doc = nlp(text)
-    if doc.ents and doc.ents[0]._.kb_ents:
-        cui = doc.ents[0]._.kb_ents[0][0]
-        return linker.kb.cui_to_entity[cui].canonical_name, cui
-    return text, "Unknown"
-
-def extract_with_retry(content, sys_instruct, max_retries=5):
-    """Handles 429 errors by waiting and retrying."""
-    delay = 30  # Initial wait for free tier exhaustion
-    for attempt in range(max_retries):
-        try:
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=content,
-                config=types.GenerateContentConfig(
-                    system_instruction=sys_instruct,
-                    response_mime_type="application/json",
-                    response_schema={
-                        "type": "OBJECT",
-                        "properties": {
-                            "triplets": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "subject": {"type": "STRING"},
-                                        "predicate": {"type": "STRING"},
-                                        "object": {"type": "STRING"}
-                                    }
-                                }
-                            }
-                        }
-                    }
-                )
-            )
-            return json.loads(response.text)
-        except Exception as e:
-            if "429" in str(e):
-                print(f"⚠️ Quota hit. Retrying in {delay}s... (Attempt {attempt+1}/{max_retries})")
-                time.sleep(delay)
-                delay *= 2  # Exponential backoff
-            else:
-                raise e
-    return None
-
-# --- MAIN EXECUTION LOOP ---
-def run_final_pilot(file_path, limit=100):
-    df = pd.read_csv(file_path, sep='\t').head(limit)
-    G = nx.MultiDiGraph()
-    sys_instruct = "Extract clinical triplets: Anatomy, Pathology, Assertion."
-
-    for _, row in df.iterrows():
-        print(f"Processing ID: {row['impression_id']}")
-
-        # 1. Local Abbreviation Expansion
-        doc = nlp(row['impressions'])
-        expanded_text = row['impressions']
-        for abrv in doc._.abbreviations:
-            expanded_text = expanded_text.replace(str(abrv), str(abrv._.long_form))
-
-        # 2. LLM Triplet Extraction
-        data = extract_with_retry(expanded_text, sys_instruct)
-
-        if data:
-            for tri in data.get('triplets', []):
-                # 3. Grounding strings to UMLS
-                subj_name, subj_cui = get_grounded_node(tri['subject'])
-                obj_name, obj_cui = get_grounded_node(tri['object'])
-
-                G.add_edge(
-                    subj_name, obj_name,
-                    relation=tri['predicate'],
-                    cui_pair=(subj_cui, obj_cui),
-                    sample_id=row['impression_id']
-                )
-
-        # Regular small delay to prevent immediate 429
-        time.sleep(12)
-
-    return G
-
-# Start the pilot
-kg_final = run_final_pilot('impressions_20250611.tsv', limit=100)
 
 !pip install groq
 !pip install python-dotenv
@@ -548,6 +384,9 @@ def visualize_and_save_kg(G, output_file="PE_Reasoning_KG.html"):
 # --- Usage ---
 visualize_and_save_kg(kg_final)
 
+
+# ==================================== ANALYSIS OF GENERATED KG ====================================
+
 def export_triplets_to_csv(G, output_file="extracted_triplets_final.csv"):
     triplet_list = []
 
@@ -698,6 +537,10 @@ def analyze_and_export_pilot_v2(G):
 
     df_pilot_results = analyze_and_export_pilot_v2(kg_final)
     print(df_pilot_results)
+
+
+
+# ======================================= SUBSET ANALYSIS & ALIGNMENT WITH ORIGINAL TEXT =======================================
 
 """SubGraph of Few Examples from reports :"""
 
