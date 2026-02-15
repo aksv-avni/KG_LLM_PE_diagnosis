@@ -1,0 +1,10 @@
+sample_id,subject_text,predicate,object_text,grounded_subject_cui,grounded_object_cui
+11561,Pulmonary emboli,located_in,"Right upper, right lower, and left lower lobes",C0034065,C1261074
+11561,Groundglass and consolidative opacities,manifested_as,Worsening multifocal infection,C0598786,C0332271
+11561,Peripheral groundglass/consolidation,associated_with,Superimposed pulmonary infarct,C0205100,C0034074
+647,Pleural Effusions,located_in,Bilateral Lungs,C0032227,C0238767
+647,Atelectasis,associated_with,Pleural Effusions,C0004144,C0032227
+647,Pleural Effusions,manifested_as,Fluid in Pleural Space,C0032227,C0302908
+647,Dilated Common Bile Duct,associated_with,Wall Enhancement,C0009437,C2349975
+647,Fluid,located_in,Gallbladder Fossa,C0302908,C0227511
+647,Cholecystectomy,associated_with,Status Post Surgery,C0008320,C0241311
