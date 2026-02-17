@@ -335,3 +335,75 @@ df_pe_triplets_analysis = export_pe_triplets_to_csv(pe_positive_results, pe_nega
 
 # Display the first few rows of the DataFrame
 display(df_pe_triplets_analysis.head())
+
+
+import spacy
+import scispacy
+from scispacy.linking import EntityLinker
+
+# 1. Load the model and linker (if not already in your script)
+# Use 'en_core_sci_sm' or whichever scispacy model you are currently using
+nlp = spacy.load("en_core_sci_sm")
+nlp.add_pipe("scispacy_linker", config={"resolve_abbreviations": True, "linker_name": "umls"})
+
+# Access the knowledge base (kb) from the linker
+linker = nlp.get_pipe("scispacy_linker")
+
+def get_canonical_name_from_cui(cui):
+    """
+    Given a UMLS CUI, return its canonical name using scispacy's KB.
+    """
+    try:
+        # linker.kb.cui_to_entity is a dictionary where keys are CUIs
+        entity = linker.kb.cui_to_entity.get(cui)
+        if entity:
+            return entity.canonical_name
+        return "Unknown CUI"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+# --- EXAMPLE USAGE ---
+
+# Suppose these are the CUIs you obtained from your pipeline
+cui_list = [
+    'C0032227',
+    'C0238767',
+    'C0004144',
+    'C0032227',
+    'C0032227',
+    'C0302908',
+    'C0009437',
+    'C2349975',
+    'C0302908',
+    'C0227511',
+    'C0008320',
+    'C0241311'
+]
+
+
+print(f"{'CUI':<12} | {'Canonical Name'}")
+print("-" * 40)
+
+for cui in cui_list:
+    name = get_canonical_name_from_cui(cui)
+    print(f"{cui:<12} | {name}")
+
+# --- INTEGRATING INTO YOUR GRAPH ---
+# If you want to rename nodes in your NetworkX graph G from CUIs to Names:
+# mapping = {node: get_canonical_name_from_cui(node) for node in G.nodes()}
+# G_named = nx.relabel_nodes(G, mapping)
+
+# CUI          | Canonical Name
+# ----------------------------------------
+# C0032227     | Pleural effusion disorder
+# C0238767     | Bilateral
+# C0004144     | Atelectasis
+# C0032227     | Pleural effusion disorder
+# C0032227     | Pleural effusion disorder
+# C0302908     | Liquid substance
+# C0009437     | Common bile duct structure
+# C2349975     | Enhance (action)
+# C0302908     | Liquid substance
+# C0227511     | Structure of gallbladder fossa of liver
+# C0008320     | Cholecystectomy procedure
+# C0241311     | post operative (finding)
